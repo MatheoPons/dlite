@@ -309,7 +309,9 @@ class Sync {
             }
         }
         let result = await response.text();
-        ide.monitor('DOWNLOAD', 'SYNC', result?.length);
+        if (result && result.length) {
+            ide.monitor('DOWNLOAD', 'SYNC', result.length / 1000);
+        }
         result = JSON.parse(result);
 
         console.info("pull result", result);
