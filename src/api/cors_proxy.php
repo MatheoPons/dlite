@@ -116,11 +116,11 @@ $headers[] = 'Origin: '.$url;
 
 curl_setopt($curl,CURLOPT_URL, $url);
 curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
-//curl_setopt($curl, CURLOPT_ENCODING, 'identity');
 
 curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 curl_setopt($curl, CURLOPT_VERBOSE, 1);
 curl_setopt($curl, CURLOPT_HEADER, 1);
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
 
 if (function_exists($method)) {
 	call_user_func($method, $curl);
@@ -128,15 +128,22 @@ if (function_exists($method)) {
 
 $result = curl_exec($curl);
 
-$header_size = curl_getinfo($curl, CURLINFO_HEADER_SIZE);
-$header = substr($result, 0, $header_size);
+if ($result === false) {
 
-applyResponseHeaders($header);
-$body = substr($result, $header_size);
+    echo curl_error($curl);
 
-echo $body;
+} else {
+
+    $header_size = curl_getinfo($curl, CURLINFO_HEADER_SIZE);
+    $header = substr($result, 0, $header_size);
+
+    applyResponseHeaders($header);
+    $body = substr($result, $header_size);
+
+    echo $body;
+
+}
 
 curl_close($curl);
-
 
 ?>
