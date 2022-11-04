@@ -26,6 +26,7 @@ class Sync {
     baseUrl = 'http://localhost';
     authorizationErrorHandler = undefined;
     resultHandler = undefined;
+    headers = undefined;
 
     /**
      * Create a new sync instance, to access the DLite's sync backend.
@@ -33,10 +34,11 @@ class Sync {
      * @param {function} resultHandler a callback that is called with the result object returned by each invocation to the sync server
      * @param baseUrl the DLite's sync server base URL
      */
-    constructor(authorizationErrorHandler, resultHandler, baseUrl) {
+    constructor(authorizationErrorHandler, resultHandler, baseUrl, headers) {
         this.authorizationErrorHandler = authorizationErrorHandler;
         this.resultHandler = resultHandler;
         this.baseUrl = baseUrl;
+        this.headers = headers || (headers => headers);
     }
 
     /**
@@ -129,10 +131,10 @@ class Sync {
 
         const response = await fetch(`${this.baseUrl}/sync_apply_actions.php?user=${userId}&key=${key}`, {
             method: 'POST',
-            headers: {
+            headers: this.headers({
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
-            },
+            }),
             body: JSON.stringify(actions)
         });
         if (response.status === 401) {
@@ -185,10 +187,10 @@ class Sync {
         const body = JSON.stringify(descriptor);
         const response = await fetch(`${this.baseUrl}/sync_upload.php?user=${userId}`, {
             method: 'POST',
-            headers: {
+            headers: this.headers({
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
-            },
+            }),
             body: body
         });
         ide.monitor('UPLOAD', 'SYNC', body?.length);
@@ -296,10 +298,10 @@ class Sync {
         ide.monitor('UPLOAD', 'SYNC', body?.length);
         const response = await fetch(`${this.baseUrl}/sync_download.php?user=${userId}`, {
             method: 'POST',
-            headers: {
+            headers: this.headers({
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
-            },
+            }),
             body: body
         });
         if (response.status === 401) {
@@ -343,10 +345,10 @@ class Sync {
         let localDescriptor = this.getSyncDescriptor();
         const response = await fetch(`${this.baseUrl}/sync_share.php?user=${userId}&key=${key}&target_user=${targetUserId}`, {
             method: 'POST',
-            headers: {
+            headers: this.headers({
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
-            }
+            })
         });
         if (response.status === 401) {
             if (this.authorizationErrorHandler) {
@@ -379,10 +381,10 @@ class Sync {
         let localDescriptor = this.getSyncDescriptor();
         const response = await fetch(`${this.baseUrl}/sync_unshare.php?user=${userId}&key=${key}&target_user=${targetUserId}`, {
             method: 'POST',
-            headers: {
+            headers: this.headers({
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
-            },
+            }),
             body: JSON.stringify(localDescriptor)
         });
         if (response.status === 401) {
@@ -414,10 +416,10 @@ class Sync {
         console.info("deleting '" + key + "'...");
         const response = await fetch(`${this.baseUrl}/sync_delete.php?user=${userId}&key=${key}`, {
             method: 'POST',
-            headers: {
+            headers: this.headers({
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
-            }
+            })
         });
         if (response.status === 401) {
             if (this.authorizationErrorHandler) {
@@ -449,10 +451,10 @@ class Sync {
         console.info("emailing...");
         const response = await fetch(`${this.baseUrl}/send_mail.php?user=${userId}&target_user=${targetUserId}&subject=${subject}`, {
             method: 'POST',
-            headers: {
+            headers: this.headers({
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
-            },
+            }),
             body: message
         });
         if (response.status === 401) {
@@ -551,10 +553,10 @@ class Sync {
         if (bundleParameters.upgrade) {
             response = await fetch(`${this.baseUrl}/admin/generate_bundle.php?user=${encodeURIComponent(userId)}`, {
                 method: 'POST',
-                headers: {
+                headers: this.headers({
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
-                },
+                }),
                 body: content
             });
         } else {
@@ -564,10 +566,10 @@ class Sync {
             }
             response = await fetch(`${this.baseUrl}/admin/generate_bundle.php?user=${encodeURIComponent(userId)}&adminPassword=${encodeURIComponent(bundleParameters.adminPassword)}&dataDirectory=${encodeURIComponent(bundleParameters.dataDirectory)}&extraConfig=${encodeURIComponent(extraConfig)}`, {
                 method: 'POST',
-                headers: {
+                headers: this.headers({
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
-                },
+                }),
                 body: content
             });
         }
@@ -595,10 +597,10 @@ class Sync {
         console.info("update admin account...", account);
         const response = await fetch(`${this.baseUrl}/admin/update_admin_account.php?user=${userId}`, {
             method: 'POST',
-            headers: {
+            headers: this.headers({
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
-            },
+            }),
             body: JSON.stringify(account)
         });
         if (response.status === 401) {

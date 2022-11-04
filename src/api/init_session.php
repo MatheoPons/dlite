@@ -24,9 +24,34 @@
         session_start();
     }
 
-    if (!isset($_SESSION['userId']) || $_SESSION['userId'] != $_GET['user']) {
-        http_response_code(401);
-        echo '{ "authorized":false, "userId":"'.$_SESSION['userId'].'", "user":"'.$_GET['user'].'", "sessionId": "'.session_id().'" }';
-        die();
+    $headers = apache_request_headers();
+
+    if (isset($headers['Authorization']) && isset($KEYCLOAK) && $KEYCLOAK == true) {
+        $curl = curl_init();
+        $url = $KC_URL . '/realms/' . $KC_REALM . '/protocol/openid-connect/userinfo';
+        curl_setopt($curl, CURLOPT_URL, $url);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($curl, CURLOPT_HTTPHEADER, array(
+            'Authorization: '. $headers['Authorization']
+        ));
+        // test with wrong token
+//         curl_setopt($curl, CURLOPT_HTTPHEADER, array(
+//             'Authorization: Bearer xxxxxxxx'
+//         ));
+        $result = curl_exec($curl);
+        curl_close($curl);
+        $result_object = json_decode($result, true);
+        if (isset($result_object['error'])) {
+            http_response_code(401);
+            echo '{ "authorized":false, "userId":"'.$_SESSION['userId'].'", "user":"'.$_GET['user'].'", "sessionId": "'.session_id().'" }';
+            die();
+        }
+
+    } else {
+        if (!isset($_SESSION['userId']) || $_SESSION['userId'] != $_GET['user']) {
+            http_response_code(401);
+            echo '{ "authorized":false, "userId":"'.$_SESSION['userId'].'", "user":"'.$_GET['user'].'", "sessionId": "'.session_id().'" }';
+            die();
+        }
     }
 ?>
