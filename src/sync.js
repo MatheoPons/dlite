@@ -57,6 +57,9 @@ class Sync {
      * @private
      */
     buildKeyString(key) {
+        if (!key) {
+            return undefined;
+        }
         if (Array.isArray(key)) {
             return key
                 .map(k => {
