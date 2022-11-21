@@ -24,41 +24,91 @@
     include 'rest_headers.php';
     include 'init_session.php';
 
-    if ($_GET['user'] == $_GET['target_user']) {
-        echo '{ "error": "cannot share for yourself - select a different target user", "user": "'.$_GET['user'].'" }';
-        die();
-    }
     if (!isset($_GET['user'])) {
         echo '{ "error": "user is not provided" }';
         die();
     }
-    if (!isset($_GET['target_user'])) {
-        echo '{ "error": "target user is not provided" }';
+
+    $unshare = true;
+
+    if (isset($_GET['target_user'])) {
+        $target_users = array($_GET['target_user']);
+        $unshare = false;
+    } else {
+        if (!isset($_GET['target_users'])) {
+            $target_users = array();
+        } else {
+            $target_users = $_GET['target_users'];
+        }
+    }
+
+    if (!is_array($target_users)) {
+        echo '{ "error": "target users must be an array" }';
         die();
     }
 
     $dir = $SYNC_DATA_DIR.'/'.$_GET['user'];
     $key = $_GET['key'];
-    $target_dir = $SYNC_DATA_DIR.'/'.$_GET['target_user'];
-
-    // if the user does not have a space yet, we create it so that s/he will access the data when joining the system
-    if (!file_exists($target_dir)) {
-        mkdir($target_dir, 0777, true);
-    }
 
     $file = $dir.'/'.$key.'.json';
     $result = false;
-    $target = '../'.$_GET['user'].'/'.$key.'.json';
+    $link_target = '../'.$_GET['user'].'/'.$key.'.json';
+    $errors = 0;
+    $shares = 0;
+    $unshares = 0;
+    $unshared_link_target = '../'.$_GET['user'].'/unshared';
 
-    if (file_exists($file)) {
-        $link = $target_dir.'/'.$key.'-$-'.$_GET['user'].'.json';
-        $result = unlink($link);
-        $result = symlink($target, $link);
-        echo '{ "target": "'.$target.'", "link": "'.$link.'", "result": "'.$result.'", "file": "'.$file.'" }';
-    } else {
-        echo '{ "target": "'.$target.'", "link": "'.$link.'", "error": "cannot share not existing data "'.$key.'" with "'.$_GET['target_user'].'", "file": "'.$file.'" }';
+    if ($unshare) {
+        $syncDirHandle = opendir($SYNC_DATA_DIR);
+        while($item = readdir($syncDirHandle)) {
+            $userPath = $SYNC_DATA_DIR."/".$item;
+            if(is_dir($userPath) && $item != '.' && $item != '..') {
+                if ($item == $_GET['user']) {
+                    continue;
+                }
+                if (in_array($item, $target_users)) {
+                    continue;
+                }
+                $link = $userPath.'/'.$key.'-$-'.$_GET['user'].'.json';
+                if (file_exists($link) && readlink($link) != $unshared_link_target) {
+                    unlink($link);
+                    symlink($unshared_link_target, $link);
+                    $unshares++;
+                }
+            }
+        }
     }
 
+    foreach ($target_users as $target_user) {
 
-?> 
+        if ($_GET['user'] == $target_user) {
+            continue;
+        }
+
+        $target_dir = $SYNC_DATA_DIR.'/'.$target_user;
+
+        // if the user does not have a space yet, we create it so that s/he will access the data when joining the system
+        if (!file_exists($target_dir)) {
+            mkdir($target_dir, 0777, true);
+        }
+
+        if (file_exists($file)) {
+            $link = $target_dir.'/'.$key.'-$-'.$_GET['user'].'.json';
+            if (readlink($link) != $link_target) {
+                $result = unlink($link);
+                $result = symlink($link_target, $link);
+                $shares++;
+            }
+        } else {
+            $errors++;
+        }
+    }
+
+    if ($errors > 0) {
+        echo '{ "link_target": "'.$link_target.'", "error": "'.$errors.' error(s) when sharing '.$key.'", "file": "'.$file.'" }';
+    } else {
+        echo '{ "link_target": "'.$link_target.'", "result": "'.$shares.' share(s) / '.$unshares.' unshare(s)", "file": "'.$file.'" }';
+    }
+
+?>
 

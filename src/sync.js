@@ -335,18 +335,32 @@ class Sync {
     /**
      * Share the given data with the given user.
      * @param {string} key the data to be shared
-     * @param {string} targetUserId the target user id (usually the email)
+     * @param {string|array} target the target user id (usually the email) or a list of user ids when multiple shares
      * @returns {Promise<void>} an object containing a description of what was executed on the server
      */
-    async share(key, targetUserId) {
+    async share(key, target) {
         let userId = this.userId;
         if (!userId) {
             console.error("set user id first");
             return;
         }
         console.info("sharing...");
-        let localDescriptor = this.getSyncDescriptor();
-        const response = await fetch(`${this.baseUrl}/sync_share.php?user=${userId}&key=${key}&target_user=${targetUserId}`, {
+        let url = `${this.baseUrl}/sync_share.php?user=${userId}&key=${key}`;
+        if (typeof target === 'string') {
+            target = [target];
+        }
+        if (Array.isArray(target)) {
+            target.forEach(targetUserId => {
+                if (targetUserId != null) {
+                    url += `&target_users[]=${targetUserId}`;
+                }
+            });
+        } else {
+            if (target != null) {
+                url += `&target_user=${target}`;
+            }
+        }
+        const response = await fetch(url, {
             method: 'POST',
             headers: this.headers({
                 'Accept': 'application/json',
